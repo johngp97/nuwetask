@@ -22,6 +22,9 @@ import java.security.NoSuchAlgorithmException;
 
 @RestController
 public class ControllerDB {
+	
+	String token_inicial="token_inicial";
+	String token_confirmacion="";
 
 	@CrossOrigin()
 	@PostMapping("/login")
@@ -32,8 +35,17 @@ public class ControllerDB {
 		JSONObject jsonObject = new JSONObject(mensaje);
 
 		String page_request = jsonObject.getString("page_request");
+		String user_token= jsonObject.getString("user_token_db");
+		
 
+		
+		
+		
+		
 		String response = "0";
+			
+		
+				
 
 		DriverManagerDataSource dataSource = new DriverManagerDataSource();
 
@@ -63,14 +75,51 @@ public class ControllerDB {
 						String.class, username_login);
 				Integer id = jdbcTemplate.queryForObject("SELECT users_id FROM Users WHERE username = ?",
 						Integer.class, username_login);
+				String id_login=id.toString();
+				
+				
+				
+				//el cliente envia el parametro user_token con valor inicio al inicio
+				if (user_token.equals("inicio")) {
+					
+			
 				if (password.equals(user_password_login)) {
+					
+					
+					try {
+			            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			            byte[] encodedHash = digest.digest(id_login.getBytes(StandardCharsets.UTF_8));
+
+			            // hash to hex
+			            StringBuilder hexString = new StringBuilder();
+			            for (byte b : encodedHash) {
+			                String hex = Integer.toHexString(0xff & b);
+			                if (hex.length() == 1) {
+			                    hexString.append('0');
+			                }
+			                hexString.append(hex);
+			            }
+
+			            token_inicial=hexString.toString();
+			        } catch (NoSuchAlgorithmException e) {
+			            // Excepciones
+			            e.printStackTrace();
+			        }
+					
+					System.out.println("se ha creado el token: " + token_inicial);
 					json.put("id", id);
+					//este token se envia al cliente y el cliente lo guarda en la cache
+					json.put("token", token_inicial);
 					json.put("response", "correct password");
 					response = json.toString();
+					
+					
 				} else {
 					json.put("response", "incorrect password");
 					response = json.toString();
 				}
+				
+			}
 
 			} else {
 				json.put("response", "Esta cuenta no existe");
@@ -95,37 +144,103 @@ public class ControllerDB {
 				jdbcTemplate.update(sql_registro, username_register, user_password_register);
 				json.put("response", "registro exitoso");
 				response = json.toString();
-				
-				String token="";
-				
-				try {
-		            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-		            byte[] encodedHash = digest.digest(username_register.getBytes(StandardCharsets.UTF_8));
-
-		            // Convertir el hash en una representación hexadecimal
-		            StringBuilder hexString = new StringBuilder();
-		            for (byte b : encodedHash) {
-		                String hex = Integer.toHexString(0xff & b);
-		                if (hex.length() == 1) {
-		                    hexString.append('0');
-		                }
-		                hexString.append(hex);
-		            }
-
-		            token=hexString.toString();
-		        } catch (NoSuchAlgorithmException e) {
-		            // Manejo de excepciones
-		            e.printStackTrace();
-		        }
-				
-				System.out.println("se ha creado el token: " + token);
-
-				
-	            
-	            
 	            
 			}
 		}
+		
+		
+		if (page_request.equals("editar")) {
+			String username_editar = jsonObject.getString("username_db");
+			String user_password_editar = jsonObject.getString("user_password_db");
+			String id_editar = jsonObject.getString("id_db");
+
+			
+			
+			try {
+	            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+	            byte[] encodedHash = digest.digest(id_editar.getBytes(StandardCharsets.UTF_8));
+
+	            // hash to hex
+	            StringBuilder hexString = new StringBuilder();
+	            for (byte b : encodedHash) {
+	                String hex = Integer.toHexString(0xff & b);
+	                if (hex.length() == 1) {
+	                    hexString.append('0');
+	                }
+	                hexString.append(hex);
+	            }
+
+	            token_confirmacion=hexString.toString();
+	        } catch (NoSuchAlgorithmException e) {
+	            // Excepciones
+	            e.printStackTrace();
+	        }
+			
+			if (token_confirmacion.equals(user_token))
+			{
+				String sql_editar = "UPDATE Users SET username=?,user_password=? WHERE users_id=?";
+				jdbcTemplate.update(sql_editar, username_editar,user_password_editar, id_editar);
+
+				json.put("response", "cambio exitoso");
+				response = json.toString();
+				System.out.println("cambio exitoso");
+				
+			}
+			
+		}
+		
+		if (page_request.equals("mostrar")) {
+		    String id_mostrar = jsonObject.getString("id_db");
+		    
+		    try {
+	            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+	            byte[] encodedHash = digest.digest(id_mostrar.getBytes(StandardCharsets.UTF_8));
+
+	            // hash to hex
+	            StringBuilder hexString = new StringBuilder();
+	            for (byte b : encodedHash) {
+	                String hex = Integer.toHexString(0xff & b);
+	                if (hex.length() == 1) {
+	                    hexString.append('0');
+	                }
+	                hexString.append(hex);
+	            }
+
+	            token_confirmacion=hexString.toString();
+	        } catch (NoSuchAlgorithmException e) {
+	            // Excepciones
+	            e.printStackTrace();
+	        }
+			
+		    System.out.println("el token de confirmacion es: "+token_confirmacion);
+		    System.out.println("el token recibido del cliente es: "+user_token);
+			if (token_confirmacion.equals(user_token))
+			{
+				final String QUERY="SELECT * FROM USERS;";
+				List<Map<String,Object>> results=jdbcTemplate.queryForList(QUERY);
+				
+				for (int i=0;i<results.size();i++)
+				{
+					System.out.println(results.get(i).get("users_id"));
+					if (id_mostrar.equals(results.get(i).get("users_id").toString()))
+					{					
+						json.put("username", results.get(i).get("username") );
+						json.put("email", results.get(i).get("email") );
+						json.put("user_password", results.get(i).get("user_password") );
+						json.put("phone", results.get(i).get("phone") );
+						json.put("address", results.get(i).get("adrress") );
+						json.put("response", "muestra exitosa");
+						response = json.toString();
+					}
+				}
+				
+			}
+			
+			
+			
+		}
+		
+		
 		
 		
 		
