@@ -108,6 +108,7 @@ public class ControllerDB {
 					
 					System.out.println("se ha creado el token: " + token_inicial);
 					json.put("id", id);
+					json.put("username", username_login);
 					//este token se envia al cliente y el cliente lo guarda en la cache
 					json.put("token", token_inicial);
 					json.put("response", "correct password");
