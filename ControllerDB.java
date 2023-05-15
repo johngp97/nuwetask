@@ -37,7 +37,7 @@ public class ControllerDB {
 
 		DriverManagerDataSource dataSource = new DriverManagerDataSource();
 
-		dataSource.setUrl("jdbc:mysql://localhost:3305/woof_finder");
+		dataSource.setUrl("jdbc:mysql://localhost:3305/hackathon_backend_db");
 		dataSource.setUsername("root");
 		dataSource.setPassword("root123");
 
@@ -95,41 +95,41 @@ public class ControllerDB {
 				jdbcTemplate.update(sql_registro, username_register, user_password_register);
 				json.put("response", "registro exitoso");
 				response = json.toString();
+				
+				String token="";
+				
+				try {
+		            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+		            byte[] encodedHash = digest.digest(username_register.getBytes(StandardCharsets.UTF_8));
+
+		            // Convertir el hash en una representación hexadecimal
+		            StringBuilder hexString = new StringBuilder();
+		            for (byte b : encodedHash) {
+		                String hex = Integer.toHexString(0xff & b);
+		                if (hex.length() == 1) {
+		                    hexString.append('0');
+		                }
+		                hexString.append(hex);
+		            }
+
+		            token=hexString.toString();
+		        } catch (NoSuchAlgorithmException e) {
+		            // Manejo de excepciones
+		            e.printStackTrace();
+		        }
+				
+				System.out.println("se ha creado el token: " + token);
+
+				
+	            
+	            
+	            
 			}
 		}
 		
-		if (page_request.equals("editar")) {
-			String username_editar = jsonObject.getString("username_db");
-			String user_password_editar = jsonObject.getString("user_password_db");
-			String id_editar = jsonObject.getString("id_db");
-
-			String sql_editar = "UPDATE Users SET username=?,user_password=? WHERE users_id=?";
-			jdbcTemplate.update(sql_editar, username_editar,user_password_editar, id_editar);
-
-			json.put("response", "cambio exitoso");
-			response = json.toString();
-			System.out.println("cambio exitoso");
-			
-		}
 		
-		if (page_request.equals("mostrar")) {
-		    String id_mostrar = jsonObject.getString("id_db");
-			
-			final String QUERY="SELECT * FROM USERS;";
-			List<Map<String,Object>> results=jdbcTemplate.queryForList(QUERY);
-			
-			for (int i=0;i<results.size();i++)
-			{
-				System.out.println(results.get(i).get("users_id"));
-				if (id_mostrar.equals(results.get(i).get("users_id").toString()))
-				{					
-					json.put("username", results.get(i).get("username") );
-					json.put("user_password", results.get(i).get("user_password") );
-					json.put("response", "muestra exitosa");
-					response = json.toString();
-				}
-			}
-		}
+		
+		
 
 		System.out.println(response);
 		return ResponseEntity.ok(response);
